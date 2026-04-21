@@ -5,8 +5,12 @@ import numpy as np
 from PIL import Image
 import io
 import uvicorn
+import os
 
 app = FastAPI()
+
+# Vercel entry point (Zaroori line)
+app = app 
 
 # Flutter app connection settings
 app.add_middleware(
@@ -16,9 +20,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. Model Load karein
+# 1. Model Load karein (Dynamic Path ke sath)
 try:
-    model = tf.keras.models.load_model('id_card_detector.h5')
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(current_dir, 'id_card_detector.h5')
+    model = tf.keras.models.load_model(model_path)
     print("✅ AI Model Loaded Successfully!")
 except Exception as e:
     print(f"❌ Error loading model: {e}")
@@ -50,19 +56,16 @@ async def verify_id(file: UploadFile = File(...)):
         print(f"File Name: {file.filename}")
         print(f"Model Raw Value: {prediction_value}")
 
-        # LOGIC with Threshold
-        # id_card = 0, not_id_card = 1
+        # LOGIC
         if prediction_value < 0.5:
             confidence = (1 - prediction_value) * 100
-            
-            # Agar confidence 80% se kam hai, toh uncertain samjho
             if confidence < 80:
                 result = {
                     "status": "failed",
                     "verified": False,
                     "label": "UNCERTAIN",
                     "confidence": f"{confidence:.2f}%",
-                    "message": "Image is not clear or recognized. Please upload a high-quality original CNIC image."
+                    "message": "Image is not clear. Please upload a high-quality original CNIC image."
                 }
             else:
                 result = {
@@ -82,12 +85,12 @@ async def verify_id(file: UploadFile = File(...)):
                 "message": "Identity could not be verified. Please upload a valid ID card."
             }
         
-        print(f"Final Decision: {result['label']} with {result['confidence']} confidence")
         return result
             
     except Exception as e:
-        print(f"Error during prediction: {e}")
         return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Local testing ke liye dynamic port
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
