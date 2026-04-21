@@ -9,7 +9,7 @@ import os
 
 app = FastAPI()
 
-# Vercel entry point (Zaroori line)
+# Entry point for Hugging Face
 app = app 
 
 # Flutter app connection settings
@@ -20,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. Model Load karein (Dynamic Path ke sath)
+# 1. Model Load karein
 try:
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(current_dir, 'id_card_detector.h5')
@@ -40,7 +40,7 @@ def prepare_image(image_bytes):
 
 @app.get("/")
 def home():
-    return {"message": "ID Card Verification API is live!"}
+    return {"message": "ID Card Verification API is live on Hugging Face!"}
 
 @app.post("/verify")
 async def verify_id(file: UploadFile = File(...)):
@@ -50,7 +50,8 @@ async def verify_id(file: UploadFile = File(...)):
         
         # AI Prediction
         prediction_raw = model.predict(image)
-        prediction_value = float(prediction_raw[0][0])
+        # Hugging Face deployment compatibility fix for prediction value
+        prediction_value = float(prediction_raw.flatten()[0])
         
         print(f"--- New Request ---")
         print(f"File Name: {file.filename}")
@@ -88,9 +89,9 @@ async def verify_id(file: UploadFile = File(...)):
         return result
             
     except Exception as e:
+        print(f"Error: {e}")
         return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    # Local testing ke liye dynamic port
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Hugging Face mandatory port
+    uvicorn.run(app, host="0.0.0.0", port=7860)
